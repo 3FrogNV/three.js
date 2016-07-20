@@ -88,7 +88,7 @@ def cast_shadow(obj):
     """
     logger.debug('object.cast_shadow(%s)', obj)
     if obj.type == LAMP:
-        if obj.data.type in (SPOT, SUN):
+        if obj.data.type in (SPOT, SUN, POINT):
             ret = obj.data.shadow_method != NO_SHADOW
         else:
             logger.info('%s is a lamp but this lamp type does not '\

@@ -98,7 +98,8 @@ class Object(base_classes.BaseNode):
 
         casts_shadow = (constants.MESH,
                         constants.DIRECTIONAL_LIGHT,
-                        constants.SPOT_LIGHT)
+                        constants.SPOT_LIGHT,
+                        constants.POINT_LIGHT)
 
         if self[constants.TYPE] in casts_shadow:
             logger.info("Querying shadow casting for %s", self.node)
