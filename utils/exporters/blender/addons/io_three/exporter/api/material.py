@@ -193,7 +193,7 @@ def normal_scale(material):
     """
 
     :param material:
-    :rtype: float
+    :rtype: tuple
 
     """
     logger.debug("material.normal_scale(%s)", material)
