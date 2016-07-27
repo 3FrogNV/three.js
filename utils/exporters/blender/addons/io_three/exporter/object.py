@@ -137,7 +137,7 @@ class Object(base_classes.BaseNode):
                     merge.append(track)
 
         if self.options.get(constants.HIERARCHY, False):
-            for child in api.object.children(self.node, self.scene.valid_types):
+            for child in api.object.children(self.node, self.scene.valid_types, self.options):
                 if not self.get(constants.CHILDREN):
                     self[constants.CHILDREN] = [Object(child, parent=self)]
                 else:
