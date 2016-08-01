@@ -250,8 +250,10 @@ def custom_properties(obj):
     # Grab any properties except those marked private (by underscore
     # prefix) or those with types that would be rejected by the JSON
     # serializer object model.
+    if obj.data == None:
+        return {}
 
-    return {kvp[0]: kvp[1] for kvp in obj.items() if kvp[0][:1] != '_' and isinstance(kvp[1], constants.VALID_DATA_TYPES)}
+    return {kvp[0]: kvp[1] for kvp in obj.data.items() if kvp[0][:1] != '_' and isinstance(kvp[1], constants.VALID_DATA_TYPES)}
 
 @_object
 def mesh(obj, options):
