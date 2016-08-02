@@ -104,16 +104,17 @@ def cast_shadow(obj):
 
 
 @_object
-def children(obj, valid_types):
+def children(obj, valid_types, options):
     """
 
     :param obj:
     :param valid_types:
+    :param options:
 
     """
     logger.debug('object.children(%s, %s)', obj, valid_types)
     for child in obj.children:
-        if child.type in valid_types:
+        if _valid_node(child, valid_types, options):
             yield child.name
 
 
@@ -340,6 +341,7 @@ def nodes(valid_types, options):
     for obj in data.objects:
         if _valid_node(obj, valid_types, options):
             yield obj.name
+
 
 @_object
 def position(obj, options):
