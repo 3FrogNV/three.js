@@ -453,7 +453,7 @@ def extract_mesh(obj, options, recalculate=False):
     :param recalculate:  (Default value = False)
 
     """
-    logger.debug('object.extract_mesh(%s, %s)', obj, options)
+    logger.info('object.extract_mesh(%s, %s)', obj, options)
     apply_modifiers = options.get(constants.APPLY_MODIFIERS, True)
     if apply_modifiers:
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -473,94 +473,104 @@ def extract_mesh(obj, options, recalculate=False):
 
     # if doing buffer geometry it is imperative to triangulate the mesh
     if opt_buffer or prop_buffer:
-        original_mesh = obj.data
-        obj.data = mesh_node
-        logger.debug('swapped %s for %s',
-                     original_mesh.name,
-                     mesh_node.name)
 
-        hidden_state = obj.hide
-        obj.hide = False
-        bpy.ops.object.mode_set(mode='OBJECT')
-        obj.select = True
-        bpy.context.scene.objects.active = obj
-        logger.info('Applying triangulation to %s', obj.data.name)
-        bpy.ops.object.modifier_add(type='TRIANGULATE')
-        bpy.ops.object.modifier_apply(apply_as='DATA',
-                                      modifier='Triangulate')
-        obj.data = original_mesh
-        obj.select = False
-        obj.hide = hidden_state
+        mesh_node.calc_tessface()
+        needs_triangulating = False
+        for face in mesh_node.tessfaces:
+            if len(face.vertices) is not 3:
+                needs_triangulating = True
+                break
+
+        if needs_triangulating:
+            logger.info('Triangulating %s', obj.name)
+            original_mesh = obj.data
+            obj.data = mesh_node
+            logger.debug('swapped %s for %s',
+                         original_mesh.name,
+                         mesh_node.name)
+
+            hidden_state = obj.hide
+            obj.hide = False
+            bpy.ops.object.mode_set(mode='OBJECT')
+            obj.select = True
+            bpy.context.scene.objects.active = obj
+            logger.info('Applying triangulation to %s', obj.data.name)
+            bpy.ops.object.modifier_add(type='TRIANGULATE')
+            bpy.ops.object.modifier_apply(apply_as='DATA',
+                                          modifier='Triangulate')
+            obj.data = original_mesh
+            obj.select = False
+            obj.hide = hidden_state
 
     # split sharp edges
-    original_mesh = obj.data
-    obj.data = mesh_node
-    obj.select = True
-
-    bpy.ops.object.modifier_add(type='EDGE_SPLIT')
-    bpy.context.object.modifiers['EdgeSplit'].use_edge_angle = False
-    bpy.context.object.modifiers['EdgeSplit'].use_edge_sharp = True
-    bpy.ops.object.modifier_apply(apply_as='DATA', modifier='EdgeSplit')
-
-    obj.select = False
-    obj.data = original_mesh
+    # original_mesh = obj.data
+    # obj.data = mesh_node
+    # obj.select = True
+    #
+    # bpy.ops.object.modifier_add(type='EDGE_SPLIT')
+    # bpy.context.object.modifiers['EdgeSplit'].use_edge_angle = False
+    # bpy.context.object.modifiers['EdgeSplit'].use_edge_sharp = True
+    # bpy.ops.object.modifier_apply(apply_as='DATA', modifier='EdgeSplit')
+    #
+    # obj.select = False
+    # obj.data = original_mesh
 
     # recalculate the normals to face outwards, this is usually
     # best after applying a modifiers, especialy for something
     # like the mirror
-    if recalculate:
-        logger.info('Recalculating normals')
-        original_mesh = obj.data
-        obj.data = mesh_node
-
-        bpy.context.scene.objects.active = obj
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.normals_make_consistent()
-        bpy.ops.object.editmode_toggle()
-
-        obj.data = original_mesh
+    # if recalculate:
+    #     logger.info('Recalculating normals')
+    #     original_mesh = obj.data
+    #     obj.data = mesh_node
+    #
+    #     bpy.context.scene.objects.active = obj
+    #     bpy.ops.object.mode_set(mode='EDIT')
+    #     bpy.ops.mesh.select_all(action='SELECT')
+    #     bpy.ops.mesh.normals_make_consistent()
+    #     bpy.ops.object.editmode_toggle()
+    #
+    #     obj.data = original_mesh
 
     if not options.get(constants.SCENE):
         xrot = mathutils.Matrix.Rotation(-math.pi/2, 4, 'X')
         mesh_node.transform(xrot * obj.matrix_world)
 
     # blend shapes
-    if options.get(constants.BLEND_SHAPES) and not options.get(constants.MORPH_TARGETS):
-        original_mesh = obj.data
-        if original_mesh.shape_keys:
-            logger.info('Using blend shapes')
-            obj.data = mesh_node  # swap to be able to add the shape keys
-            shp = original_mesh.shape_keys
-
-            animCurves = shp.animation_data
-            if animCurves:
-                animCurves = animCurves.action.fcurves
-
-            src_kbs = shp.key_blocks
-            for key in src_kbs.keys():
-                logger.info("-- Parsing key %s", key)
-                obj.shape_key_add(name=key, from_mix=False)
-                src_kb = src_kbs[key].data
-                if key == 'Basis':
-                    dst_kb = mesh_node.vertices
-                else:
-                    dst_kb = mesh_node.shape_keys.key_blocks[key].data
-                for idx in range(len(src_kb)):
-                    dst_kb[idx].co = src_kb[idx].co
-
-                if animCurves:
-                    data_path = 'key_blocks["'+key+'"].value'
-                    for fcurve in animCurves:
-                        if fcurve.data_path == data_path:
-                            dst_kb = mesh_node.shape_keys.key_blocks[key]
-                            for xx in fcurve.keyframe_points:
-                                dst_kb.value = xx.co.y
-                                dst_kb.keyframe_insert("value",frame=xx.co.x)
-                            pass
-                            break  # no need to continue to loop
-                    pass
-            obj.data = original_mesh
+    # if options.get(constants.BLEND_SHAPES) and not options.get(constants.MORPH_TARGETS):
+    #     original_mesh = obj.data
+    #     if original_mesh.shape_keys:
+    #         logger.info('Using blend shapes')
+    #         obj.data = mesh_node  # swap to be able to add the shape keys
+    #         shp = original_mesh.shape_keys
+    #
+    #         animCurves = shp.animation_data
+    #         if animCurves:
+    #             animCurves = animCurves.action.fcurves
+    #
+    #         src_kbs = shp.key_blocks
+    #         for key in src_kbs.keys():
+    #             logger.info("-- Parsing key %s", key)
+    #             obj.shape_key_add(name=key, from_mix=False)
+    #             src_kb = src_kbs[key].data
+    #             if key == 'Basis':
+    #                 dst_kb = mesh_node.vertices
+    #             else:
+    #                 dst_kb = mesh_node.shape_keys.key_blocks[key].data
+    #             for idx in range(len(src_kb)):
+    #                 dst_kb[idx].co = src_kb[idx].co
+    #
+    #             if animCurves:
+    #                 data_path = 'key_blocks["'+key+'"].value'
+    #                 for fcurve in animCurves:
+    #                     if fcurve.data_path == data_path:
+    #                         dst_kb = mesh_node.shape_keys.key_blocks[key]
+    #                         for xx in fcurve.keyframe_points:
+    #                             dst_kb.value = xx.co.y
+    #                             dst_kb.keyframe_insert("value",frame=xx.co.x)
+    #                         pass
+    #                         break  # no need to continue to loop
+    #                 pass
+    #         obj.data = original_mesh
 
     # now generate a unique name
     index = 0
